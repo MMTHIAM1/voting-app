@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  vote:
+    build: ./vote
+    container_name: vote_service
+    ports:
+      - "5000:80"
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+
+  result:
+    build: ./result
+    container_name: result_service
+    ports:
+      - "5001:80"
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+
+  worker:
+    build: ./worker
+    container_name: worker_service
+    networks:
+      - backend
+    depends_on:
+      - redis
+      - db
+    env_file:
+      - .env
+
+  redis:
+    image: redis:latest
+    container_name: redis_cache
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  db:
+    image: postgres:15-alpine
+    container_name: votes_db
+    ports:
+      - "5432:5432"
+    networks:
+      - backend
+    volumes:
+      - db-vote:/var/lib/postgresql/data
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  db-vote:
+
+networks:
+  frontend:
+  backend:
