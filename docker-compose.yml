@@ -4,7 +4,8 @@ services:
   vote:
     build: ./vote
     container_name: vote_service
-    # ports: # <-- RETIREZ CETTE LIGNE si Nginx gère l'exposition
+    # Assurez-vous d'avoir bien commenté ou retiré la ligne 'ports' si Nginx gère l'exposition
+    # ports:
     #   - "5000:80"
     networks:
       - frontend
@@ -14,11 +15,18 @@ services:
         condition: service_healthy
     env_file:
       - ./.env
+    healthcheck: # <-- AJOUTEZ CE BLOC
+      test: ["CMD", "curl", "-f", "http://localhost:80"] # Adaptez le port si votre application 'vote' écoute sur un autre port interne
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s # Donne un peu de temps à l'application pour démarrer
 
   result:
     build: ./result
     container_name: result_service
-    # ports: # <-- RETIREZ CETTE LIGNE si Nginx gère l'exposition
+    # Assurez-vous d'avoir bien commenté ou retiré la ligne 'ports' si Nginx gère l'exposition
+    # ports:
     #   - "5001:80"
     networks:
       - frontend
@@ -28,6 +36,12 @@ services:
         condition: service_healthy
     env_file:
       - ./.env
+    healthcheck: # <-- AJOUTEZ CE BLOC
+      test: ["CMD", "curl", "-f", "http://localhost:80"] # Adaptez le port si votre application 'result' écoute sur un autre port interne
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s # Donne un peu de temps à l'application pour démarrer
 
   worker:
     build: ./worker
@@ -41,6 +55,13 @@ services:
         condition: service_healthy
     env_file:
       - ./.env
+    # Optionnel: Vous pourriez aussi ajouter un healthcheck ici pour le worker
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8080/health"] # Exemple, adaptez au port et au chemin de votre worker
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 3
+    #   start_period: 10s
 
   redis:
     image: redis:latest
@@ -56,7 +77,7 @@ services:
   db:
     image: postgres:15-alpine
     container_name: votes_db
-    # ports: # <-- RETIREZ CETTE LIGNE pour plus de sécurité
+    # ports: # <-- Bien de l'avoir commenté pour la sécurité
     #   - "5432:5432"
     networks:
       - backend
@@ -71,26 +92,25 @@ services:
       retries: 5
       start_period: 10s
 
-  nginx: # <-- NOUVEAU SERVICE NGINX
+  nginx:
     image: nginx:latest
     container_name: voting_nginx
     ports:
-      - "80:80"  # HTTP pour la redirection vers HTTPS
-      - "443:443" # HTTPS
+      - "80:80"
+      - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./certs:/etc/nginx/certs:ro # Monte le dossier des certificats
+      - ./certs:/etc/nginx/certs:ro
     depends_on:
-      vote: # Nginx dépend des services frontend qu'il va proxyfier
-        condition: service_healthy
+      vote:
+        condition: service_healthy # Cette ligne est maintenant valide
       result:
-        condition: service_healthy
+        condition: service_healthy # Cette ligne est maintenant valide
     networks:
-      - frontend # Nginx doit être sur le réseau qui accède aux frontends
+      - frontend
 
 volumes:
   db-vote:
-  # Pas de volume pour Nginx car il n'a pas de données persistantes importantes
 
 networks:
   frontend:
