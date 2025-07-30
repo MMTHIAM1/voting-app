@@ -68,7 +68,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-      
+
   nginx:
     build: ./nginx
     container_name: nginx
@@ -76,6 +76,9 @@ services:
       - "4443:443"
     depends_on:
       - vote
+    networks:
+      - frontend   # <-- Ajouté ici
+      - backend    # <-- Facultatif, selon si tu veux accéder à db/worker/etc.
 
 volumes:
   db-vote:
