@@ -46,6 +46,16 @@ pipeline {
     }
 
     post {
+    	success {
+    		mail to: 'your@email.com',
+         	subject: "Pipeline SUCCESS",
+         	body: "Le pipeline a réussi !"
+  	}
+  	failure {
+    		mail to: 'your@email.com',
+         	subject: "Pipeline FAILURE",
+         	body: "Le pipeline a échoué."
+        }
         always {
             echo 'Pipeline finished. Cleaning up workspace.'
         }
