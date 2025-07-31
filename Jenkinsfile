@@ -44,6 +44,19 @@ pipeline {
             }
         }
 
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarLocal') {
+                    dir('voting-app') {
+                        script {
+                            echo 'Starting SonarQube code analysis...'
+                            sh 'sonar-scanner'
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Push') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
