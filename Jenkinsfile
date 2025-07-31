@@ -2,9 +2,13 @@ pipeline {
     agent any
 
     environment {
-        SONARQUBE_SERVER = 'SonarLocal'                 // Nom configuré dans Jenkins > SonarQube Servers
-        DOCKERHUB_CREDS = 'docker-hub-creds'            // ID des credentials dans Jenkins
-        DOCKERHUB_REPO = 'mon_repository'               // À adapter à ton Docker Hub
+        // Configuration SonarQube
+        SONARQUBE_SERVER = 'SonarLocal'                   // Nom configuré dans Jenkins > SonarQube Servers
+        SONARQUBE_PROJECT_KEY = 'mon_projet_devops'       // Remplacez par la clé de votre projet SonarQube
+
+        // Configuration Docker Hub
+        DOCKERHUB_CREDS = 'docker-hub-creds'              // ID des credentials dans Jenkins
+        DOCKERHUB_REPO = 'mon_repository'                 // Remplacez par votre nom d'utilisateur/repo Docker Hub
     }
 
     stages {
@@ -26,7 +30,30 @@ pipeline {
                 }
             }
         }
+        
+        stage('SonarQube analysis') {
+            steps {
+                script {
+                    // Utilise le wrapper pour les credentials et les variables d'environnement SonarQube
+                    withSonarQubeEnv(SONARQUBE_SERVER) {
+                        def scannerHome = tool 'SonarQubeScanner';
+                        // Remplacez par le chemin de votre projet s'il n'est pas à la racine
+                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${SONARQUBE_PROJECT_KEY} -Dsonar.sources=."
+                    }
+                }
+            }
+        }
 
+        stage("Quality Gate") {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    script {
+                        echo '⏳ Attente des résultats du Quality Gate de SonarQube...'
+                        waitForQualityGate()
+                    }
+                }
+            }
+        }
         stage('Deploy Application') {
             steps {
                 dir('voting-app') {
@@ -50,9 +77,7 @@ pipeline {
                 }
             }
         }
-
         
-
         stage('Push to Docker Hub') {
             steps {
                 withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDS}", usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
@@ -61,45 +86,18 @@ pipeline {
                         sh '''
                             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
 
-                            docker tag job5-vote $DOCKERHUB_USER/${DOCKERHUB_REPO}:vote
-                            docker tag job5-result $DOCKERHUB_USER/${DOCKERHUB_REPO}:result
-                            docker tag job5-worker $DOCKERHUB_USER/${DOCKERHUB_REPO}:worker
+                            docker tag job5-vote "$DOCKERHUB_USER/$DOCKERHUB_REPO:vote"
+                            docker tag job5-result "$DOCKERHUB_USER/$DOCKERHUB_REPO:result"
+                            docker tag job5-worker "$DOCKERHUB_USER/$DOCKERHUB_REPO:worker"
 
-                            docker push $DOCKERHUB_USER/${DOCKERHUB_REPO}:vote
-                            docker push $DOCKERHUB_USER/${DOCKERHUB_REPO}:result
-                            docker push $DOCKERHUB_USER/${DOCKERHUB_REPO}:worker
+                            docker push "$DOCKERHUB_USER/$DOCKERHUB_REPO:vote"
+                            docker push "$DOCKERHUB_USER/$DOCKERHUB_REPO:result"
+                            docker push "$DOCKERHUB_USER/$DOCKERHUB_REPO:worker"
                         '''
                     }
                 }
             }
         }
-        stage('SonarQube analysis') {
-            steps {
-                // Utilise le wrapper pour les credentials et les variables d'environnement SonarQube
-                withSonarQubeEnv('Mon Serveur SonarQube') {
-                    sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=mon_projet_devops -Dsonar.sources=."
-                }
-            }
-        }
-
-        // Étape optionnelle pour attendre que l'analyse soit complète
-        stage("Quality Gate") {
-            steps {
-                timeout(time: 5, unit: 'MINUTES') {
-                    // La fonction waitForQualityGate va attendre que l'analyse SonarQube soit traitée
-                    // et que le "Quality Gate" soit vert avant de continuer.
-                    // Elle échouera après 5 minutes si ce n'est pas le cas.
-                    sh 'sleep 10' // Attendre un peu avant de faire la première requête
-                    // Utilise le nom de votre serveur SonarQube que vous avez configuré
-                    script {
-                        def scannerHome = tool 'SonarQubeScanner';
-                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=mon_projet_devops -Dsonar.sources=."
-                        waitForQualityGate()
-                    }
-                }
-            }
-        }
-    }
     }
 
     post {
@@ -119,4 +117,3 @@ pipeline {
         }
     }
 }
-
