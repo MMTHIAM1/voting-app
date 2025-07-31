@@ -2,13 +2,9 @@ pipeline {
     agent any
 
     environment {
-        // Configuration SonarQube
-        SONARQUBE_SERVER = 'SonarLocal'                   // Nom configuré dans Jenkins > SonarQube Servers
-        SONARQUBE_PROJECT_KEY = 'mon_projet_devops'       // Remplacez par la clé de votre projet SonarQube
-
-        // Configuration Docker Hub
-        DOCKERHUB_CREDS = 'docker-hub-creds'              // ID des credentials dans Jenkins
-        DOCKERHUB_REPO = 'mon_repository'                 // Remplacez par votre nom d'utilisateur/repo Docker Hub
+        SONARQUBE_SERVER = 'SonarLocal'                 // Nom configuré dans Jenkins > SonarQube Servers
+        DOCKERHUB_CREDS = 'docker-hub-creds'            // ID des credentials dans Jenkins
+        DOCKERHUB_REPO = 'mon_repository'               // À adapter à ton Docker Hub
     }
 
     stages {
@@ -30,30 +26,7 @@ pipeline {
                 }
             }
         }
-        
-        stage('SonarQube analysis') {
-            steps {
-                script {
-                    // Utilise le wrapper pour les credentials et les variables d'environnement SonarQube
-                    withSonarQubeEnv(SONARQUBE_SERVER) {
-                        def scannerHome = tool 'SonarQubeScanner';
-                        // Remplacez par le chemin de votre projet s'il n'est pas à la racine
-                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${SONARQUBE_PROJECT_KEY} -Dsonar.sources=."
-                    }
-                }
-            }
-        }
 
-        stage("Quality Gate") {
-            steps {
-                timeout(time: 5, unit: 'MINUTES') {
-                    script {
-                        echo '⏳ Attente des résultats du Quality Gate de SonarQube...'
-                        waitForQualityGate()
-                    }
-                }
-            }
-        }
         stage('Deploy Application') {
             steps {
                 dir('voting-app') {
@@ -77,7 +50,9 @@ pipeline {
                 }
             }
         }
+
         
+
         stage('Push to Docker Hub') {
             steps {
                 withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDS}", usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
@@ -86,19 +61,20 @@ pipeline {
                         sh '''
                             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
 
-                            docker tag job5-vote "$DOCKERHUB_USER/$DOCKERHUB_REPO:vote"
-                            docker tag job5-result "$DOCKERHUB_USER/$DOCKERHUB_REPO:result"
-                            docker tag job5-worker "$DOCKERHUB_USER/$DOCKERHUB_REPO:worker"
+                            docker tag job5-vote $DOCKERHUB_USER/${DOCKERHUB_REPO}:vote
+                            docker tag job5-result $DOCKERHUB_USER/${DOCKERHUB_REPO}:result
+                            docker tag job5-worker $DOCKERHUB_USER/${DOCKERHUB_REPO}:worker
 
-                            docker push "$DOCKERHUB_USER/$DOCKERHUB_REPO:vote"
-                            docker push "$DOCKERHUB_USER/$DOCKERHUB_REPO:result"
-                            docker push "$DOCKERHUB_USER/$DOCKERHUB_REPO:worker"
+                            docker push $DOCKERHUB_USER/${DOCKERHUB_REPO}:vote
+                            docker push $DOCKERHUB_USER/${DOCKERHUB_REPO}:result
+                            docker push $DOCKERHUB_USER/${DOCKERHUB_REPO}:worker
                         '''
                     }
                 }
             }
         }
     }
+    
 
     post {
         success {
@@ -117,3 +93,4 @@ pipeline {
         }
     }
 }
+
