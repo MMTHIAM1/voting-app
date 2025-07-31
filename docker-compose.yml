@@ -76,6 +76,7 @@ services:
       - "4443:443"
     depends_on:
       - vote
+      - result
     networks:
       - frontend   # <-- Ajouté ici
       - backend    # <-- Facultatif, selon si tu veux accéder à db/worker/etc.
