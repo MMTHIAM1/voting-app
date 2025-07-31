@@ -73,6 +73,33 @@ pipeline {
                 }
             }
         }
+        stage('SonarQube analysis') {
+            steps {
+                // Utilise le wrapper pour les credentials et les variables d'environnement SonarQube
+                withSonarQubeEnv('Mon Serveur SonarQube') {
+                    sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=mon_projet_devops -Dsonar.sources=."
+                }
+            }
+        }
+
+        // Étape optionnelle pour attendre que l'analyse soit complète
+        stage("Quality Gate") {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    // La fonction waitForQualityGate va attendre que l'analyse SonarQube soit traitée
+                    // et que le "Quality Gate" soit vert avant de continuer.
+                    // Elle échouera après 5 minutes si ce n'est pas le cas.
+                    sh 'sleep 10' // Attendre un peu avant de faire la première requête
+                    // Utilise le nom de votre serveur SonarQube que vous avez configuré
+                    script {
+                        def scannerHome = tool 'SonarQubeScanner';
+                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=mon_projet_devops -Dsonar.sources=."
+                        waitForQualityGate()
+                    }
+                }
+            }
+        }
+    }
     }
 
     post {
