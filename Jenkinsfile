@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        sonarQubeScanner 'Default' // Nom configuré dans Jenkins > Global Tool Configuration
-    }
-
     environment {
         SONARQUBE_SERVER = 'SonarLocal' // Nom configuré dans Jenkins > SonarQube Servers
     }
