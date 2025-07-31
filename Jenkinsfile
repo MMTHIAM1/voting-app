@@ -43,38 +43,40 @@ pipeline {
                 }
             }
         }
+
         stage('Push') {
-  	  steps {
-    		withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', 		usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
-      		sh '''
-        		echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
+                    sh '''
+                        echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
 
-        		docker tag JOB5-vote $DOCKERHUB_USER/ mon_repository:vote
-        		docker tag JOB5-result $DOCKERHUB_USER/ mon_repository:result
-        		docker tag JOB5-worker $DOCKERHUB_USER/ mon_repository:worker
+                        docker tag job5-vote $DOCKERHUB_USER/mon_repository:vote
+                        docker tag job5-result $DOCKERHUB_USER/mon_repository:result
+                        docker tag job5-worker $DOCKERHUB_USER/mon_repository:worker
 
-        		docker push $DOCKERHUB_USER/ mon_repository:vote
-        		docker push $DOCKERHUB_USER/ mon_repository:result
-        		docker push $DOCKERHUB_USER/ mon_repository:worker
-      		'''
-    }
-  }
-}
+                        docker push $DOCKERHUB_USER/mon_repository:vote
+                        docker push $DOCKERHUB_USER/mon_repository:result
+                        docker push $DOCKERHUB_USER/mon_repository:worker
+                    '''
+                }
+            }
+        }
     }
 
     post {
-    	success {
-    		mail to: 'mactaribrahimathiam@gmail.com',
-         	subject: "Pipeline SUCCESS",
-         	body: "Le pipeline a réussi !"
-  	}
-  	failure {
-    		mail to: 'mactaribrahimathiam@gmail.com',
-         	subject: "Pipeline FAILURE",
-         	body: "Le pipeline a échoué."
+        success {
+            mail to: 'mactaribrahimathiam@gmail.com',
+                 subject: "Pipeline SUCCESS",
+                 body: "Le pipeline a réussi !"
+        }
+        failure {
+            mail to: 'mactaribrahimathiam@gmail.com',
+                 subject: "Pipeline FAILURE",
+                 body: "Le pipeline a échoué."
         }
         always {
             echo 'Pipeline finished. Cleaning up workspace.'
         }
     }
 }
+
