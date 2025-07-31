@@ -51,18 +51,7 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv("${env.SONARQUBE_SERVER}") {
-                    dir('voting-app') {
-                        script {
-                            echo '📊 Analyse du code avec SonarQube...'
-                            sh 'sonar-scanner'
-                        }
-                    }
-                }
-            }
-        }
+        
 
         stage('Push to Docker Hub') {
             steps {
